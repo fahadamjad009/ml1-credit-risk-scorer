@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cpu
+          pip install "numpy>=2.0,<2.1"
+          pip install -r requirements.txt
+
+      - name: Download dataset
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          pip install kaggle
+          mkdir -p data/raw
+          kaggle competitions download -c home-credit-default-risk -f application_train.csv -p data/raw/
+          cd data/raw && unzip -o application_train.csv.zip && rm application_train.csv.zip
+
+      - name: Build processed data
+        run: python -m src.data
+
+      - name: Engineer features
+        run: python -m src.features
+
+      - name: Train models
+        run: python -m src.train --model both
+
+      - name: Evaluate models
+        run: python -m src.evaluate
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reports
+          path: reports/
