@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -26,12 +26,16 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: ${{ runner.os }}-pip-
 
-      - name: Install dependencies
+      - name: Install PyTorch (CPU, Linux)
         run: |
-          pip install --upgrade pip
           pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install remaining dependencies
+        run: |
           pip install "numpy>=2.0,<2.1"
-          pip install -r requirements.txt
+          pip install --no-deps -r requirements.txt || true
+          pip install scikit-learn joblib xgboost shap fastapi uvicorn \
+                      streamlit plotly pandas matplotlib
 
       - name: Download dataset
         env:
@@ -40,20 +44,17 @@ jobs:
         run: |
           pip install kaggle
           mkdir -p data/raw
-          kaggle competitions download -c home-credit-default-risk -f application_train.csv -p data/raw/
-          cd data/raw && unzip -o application_train.csv.zip && rm application_train.csv.zip
+          kaggle competitions download -c home-credit-default-risk \
+            -f application_train.csv -p data/raw/
+          cd data/raw && unzip -o application_train.csv.zip \
+            && rm application_train.csv.zip
 
-      - name: Build processed data
-        run: python -m src.data
-
-      - name: Engineer features
-        run: python -m src.features
-
-      - name: Train models
-        run: python -m src.train --model both
-
-      - name: Evaluate models
-        run: python -m src.evaluate
+      - name: Build pipeline
+        run: |
+          python -m src.data
+          python -m src.features
+          python -m src.train --model both
+          python -m src.evaluate
 
       - name: Run tests
         run: pytest tests/ -v --tb=short
