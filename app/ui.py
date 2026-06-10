@@ -99,9 +99,17 @@ def load_models(v=3):  # bump v to bust cache
     else:
         feat_names = ALL_FEATURE_NAMES  # hardcoded fallback
 
-    # val data for ROC/distribution charts — optional
-    val_npy = PROC_DIR / "X_val.npy"
-    if val_npy.exists():
+    # val data for ROC/distribution charts
+    # prefer pre-computed probs in models/ (works on cloud without processed data)
+    xgb_vp_path = MODELS_DIR / "xgb_val_probs.npy"
+    nn_vp_path  = MODELS_DIR / "nn_val_probs.npy"
+    y_val_path  = MODELS_DIR / "y_val.npy"
+
+    if xgb_vp_path.exists() and y_val_path.exists():
+        xgb_vp = np.load(xgb_vp_path)
+        nn_vp  = np.load(nn_vp_path) if nn_vp_path.exists() else xgb_vp
+        y_val  = np.load(y_val_path)
+    elif (PROC_DIR / "X_val.npy").exists():
         feat_base_real = (PROC_DIR / "feature_names.txt").read_text().splitlines() if (PROC_DIR / "feature_names.txt").exists() else BASE_FEATURE_NAMES
         X_val = np.load(PROC_DIR / "X_val.npy")
         y_val = np.load(PROC_DIR / "y_val.npy")
@@ -114,18 +122,20 @@ def load_models(v=3):  # bump v to bust cache
                 b = torch.tensor(Xvs[i:i+4096], dtype=torch.float32)
                 nn_vp_list.extend(nn_net(b).squeeze(1).sigmoid().tolist())
         nn_vp = np.array(nn_vp_list, dtype=np.float32)
+    else:
+        y_val = xgb_vp = nn_vp = None
+
+    # medians for NN default inputs
+    medians_path = MODELS_DIR / "feature_medians.npy"
+    if medians_path.exists():
+        feat_medians = np.load(medians_path)
+    elif (PROC_DIR / "X_train.npy").exists():
+        feat_base_real = (PROC_DIR / "feature_names.txt").read_text().splitlines() if (PROC_DIR / "feature_names.txt").exists() else BASE_FEATURE_NAMES
         X_train = np.load(PROC_DIR / "X_train.npy")
         _, Xte, _ = build_features(X_train, X_train, feat_base_real)
         feat_medians = np.median(Xte, axis=0).astype(np.float32)
     else:
-        # cloud mode — no val data, skip val charts
-        y_val = xgb_vp = nn_vp = None
-        # load pre-computed medians from models/ (committed to repo)
-        medians_path = MODELS_DIR / "feature_medians.npy"
-        if medians_path.exists():
-            feat_medians = np.load(medians_path)
-        else:
-            feat_medians = np.zeros(len(feat_names), dtype=np.float32)
+        feat_medians = np.zeros(len(feat_names), dtype=np.float32)
 
     return xgb, nn_net, scaler, feat_names, y_val, xgb_vp, nn_vp, feat_medians
 
