@@ -118,9 +118,14 @@ def load_models(v=3):  # bump v to bust cache
         _, Xte, _ = build_features(X_train, X_train, feat_base_real)
         feat_medians = np.median(Xte, axis=0).astype(np.float32)
     else:
-        # cloud mode — no val data, use zeros as medians, skip val charts
+        # cloud mode — no val data, skip val charts
         y_val = xgb_vp = nn_vp = None
-        feat_medians = np.zeros(len(feat_names), dtype=np.float32)
+        # load pre-computed medians from models/ (committed to repo)
+        medians_path = MODELS_DIR / "feature_medians.npy"
+        if medians_path.exists():
+            feat_medians = np.load(medians_path)
+        else:
+            feat_medians = np.zeros(len(feat_names), dtype=np.float32)
 
     return xgb, nn_net, scaler, feat_names, y_val, xgb_vp, nn_vp, feat_medians
 
