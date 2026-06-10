@@ -21,6 +21,14 @@ from src.train import CreditRiskNN, MODELS_DIR, DEVICE
 from src.features import build_features
 from src.data import PROC_DIR
 
+# ── hardcoded feature names (cloud deployment fallback) ──────────────────────
+BASE_FEATURE_NAMES = ['NAME_CONTRACT_TYPE', 'CODE_GENDER', 'FLAG_OWN_CAR', 'FLAG_OWN_REALTY', 'CNT_CHILDREN', 'AMT_INCOME_TOTAL', 'AMT_CREDIT', 'AMT_ANNUITY', 'AMT_GOODS_PRICE', 'NAME_TYPE_SUITE', 'NAME_INCOME_TYPE', 'NAME_EDUCATION_TYPE', 'NAME_FAMILY_STATUS', 'NAME_HOUSING_TYPE', 'REGION_POPULATION_RELATIVE', 'DAYS_BIRTH', 'DAYS_EMPLOYED', 'DAYS_REGISTRATION', 'DAYS_ID_PUBLISH', 'OWN_CAR_AGE', 'FLAG_MOBIL', 'FLAG_EMP_PHONE', 'FLAG_WORK_PHONE', 'FLAG_CONT_MOBILE', 'FLAG_PHONE', 'FLAG_EMAIL', 'OCCUPATION_TYPE', 'CNT_FAM_MEMBERS', 'REGION_RATING_CLIENT', 'REGION_RATING_CLIENT_W_CITY', 'WEEKDAY_APPR_PROCESS_START', 'HOUR_APPR_PROCESS_START', 'REG_REGION_NOT_LIVE_REGION', 'REG_REGION_NOT_WORK_REGION', 'LIVE_REGION_NOT_WORK_REGION', 'REG_CITY_NOT_LIVE_CITY', 'REG_CITY_NOT_WORK_CITY', 'LIVE_CITY_NOT_WORK_CITY', 'ORGANIZATION_TYPE', 'EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3', 'APARTMENTS_AVG', 'BASEMENTAREA_AVG', 'YEARS_BEGINEXPLUATATION_AVG', 'YEARS_BUILD_AVG', 'COMMONAREA_AVG', 'ELEVATORS_AVG', 'ENTRANCES_AVG', 'FLOORSMAX_AVG', 'FLOORSMIN_AVG', 'LANDAREA_AVG', 'LIVINGAPARTMENTS_AVG', 'LIVINGAREA_AVG', 'NONLIVINGAPARTMENTS_AVG', 'NONLIVINGAREA_AVG', 'APARTMENTS_MODE', 'BASEMENTAREA_MODE', 'YEARS_BEGINEXPLUATATION_MODE', 'YEARS_BUILD_MODE', 'COMMONAREA_MODE', 'ELEVATORS_MODE', 'ENTRANCES_MODE', 'FLOORSMAX_MODE', 'FLOORSMIN_MODE', 'LANDAREA_MODE', 'LIVINGAPARTMENTS_MODE', 'LIVINGAREA_MODE', 'NONLIVINGAPARTMENTS_MODE', 'NONLIVINGAREA_MODE', 'APARTMENTS_MEDI', 'BASEMENTAREA_MEDI', 'YEARS_BEGINEXPLUATATION_MEDI', 'YEARS_BUILD_MEDI', 'COMMONAREA_MEDI', 'ELEVATORS_MEDI', 'ENTRANCES_MEDI', 'FLOORSMAX_MEDI', 'FLOORSMIN_MEDI', 'LANDAREA_MEDI', 'LIVINGAPARTMENTS_MEDI', 'LIVINGAREA_MEDI', 'NONLIVINGAPARTMENTS_MEDI', 'NONLIVINGAREA_MEDI', 'FONDKAPREMONT_MODE', 'HOUSETYPE_MODE', 'TOTALAREA_MODE', 'WALLSMATERIAL_MODE', 'EMERGENCYSTATE_MODE', 'OBS_30_CNT_SOCIAL_CIRCLE', 'DEF_30_CNT_SOCIAL_CIRCLE', 'OBS_60_CNT_SOCIAL_CIRCLE', 'DEF_60_CNT_SOCIAL_CIRCLE', 'DAYS_LAST_PHONE_CHANGE', 'FLAG_DOCUMENT_2', 'FLAG_DOCUMENT_3', 'FLAG_DOCUMENT_4', 'FLAG_DOCUMENT_5', 'FLAG_DOCUMENT_6', 'FLAG_DOCUMENT_7', 'FLAG_DOCUMENT_8', 'FLAG_DOCUMENT_9', 'FLAG_DOCUMENT_10', 'FLAG_DOCUMENT_11', 'FLAG_DOCUMENT_12', 'FLAG_DOCUMENT_13', 'FLAG_DOCUMENT_14', 'FLAG_DOCUMENT_15', 'FLAG_DOCUMENT_16', 'FLAG_DOCUMENT_17', 'FLAG_DOCUMENT_18', 'FLAG_DOCUMENT_19', 'FLAG_DOCUMENT_20', 'FLAG_DOCUMENT_21', 'AMT_REQ_CREDIT_BUREAU_HOUR', 'AMT_REQ_CREDIT_BUREAU_DAY', 'AMT_REQ_CREDIT_BUREAU_WEEK', 'AMT_REQ_CREDIT_BUREAU_MON', 'AMT_REQ_CREDIT_BUREAU_QRT', 'AMT_REQ_CREDIT_BUREAU_YEAR']
+
+ENG_FEATURE_NAMES = ['ANNUITY_TO_INCOME', 'CREDIT_TO_INCOME', 'ANNUITY_TO_CREDIT', 'GOODS_TO_CREDIT', 'INCOME_PER_PERSON', 'CHILDREN_RATIO', 'EMPLOYED_TO_AGE', 'EXT_SOURCE_MEAN', 'EXT_SOURCE_MIN', 'EXT_SOURCE_MAX', 'EXT_SOURCE_STD', 'EXT_SOURCE_1_x_EXT_SOURCE_2', 'EXT_SOURCE_1_x_EXT_SOURCE_3', 'EXT_SOURCE_2_x_EXT_SOURCE_3', 'EXT_SOURCE_MEAN_x_CREDIT_TO_INCOME', 'EXT_SOURCE_MEAN_x_ANNUITY_TO_INCOME', 'DAYS_BIRTH_x_EXT_SOURCE_1', 'DAYS_BIRTH_x_EXT_SOURCE_2', 'DAYS_BIRTH_x_EXT_SOURCE_3', 'CREDIT_TO_INCOME_x_ANNUITY_TO_INCOME', 'DAYS_EMPLOYED_x_EXT_SOURCE_2', 'AGE_BIN', 'EMP_BIN']
+
+ALL_FEATURE_NAMES = BASE_FEATURE_NAMES + ENG_FEATURE_NAMES
+
+
 st.set_page_config(page_title="Credit Risk Scorer", page_icon="💳",
                    layout="wide", initial_sidebar_state="expanded")
 
@@ -84,31 +92,41 @@ def load_models(v=3):  # bump v to bust cache
     nn_net.load_state_dict(ckpt["model_state"])
     nn_net.eval()
     scaler     = joblib.load(MODELS_DIR / "nn_scaler.joblib")
-    feat_names = (PROC_DIR / "feature_names_eng.txt").read_text().splitlines()
-    feat_base  = (PROC_DIR / "feature_names.txt").read_text().splitlines()
+    # feature names — use embedded list (works on cloud without processed data)
+    feat_eng_path = PROC_DIR / "feature_names_eng.txt"
+    if feat_eng_path.exists():
+        feat_names = feat_eng_path.read_text().splitlines()
+    else:
+        feat_names = ALL_FEATURE_NAMES  # hardcoded fallback
 
-    X_val = np.load(PROC_DIR / "X_val.npy")
-    y_val = np.load(PROC_DIR / "y_val.npy")
-    _, Xve, _ = build_features(X_val, X_val, feat_base)
-    xgb_vp = xgb.predict_proba(Xve)[:, 1]
+    # val data for ROC/distribution charts — optional
+    val_npy = PROC_DIR / "X_val.npy"
+    if val_npy.exists():
+        feat_base_real = (PROC_DIR / "feature_names.txt").read_text().splitlines() if (PROC_DIR / "feature_names.txt").exists() else BASE_FEATURE_NAMES
+        X_val = np.load(PROC_DIR / "X_val.npy")
+        y_val = np.load(PROC_DIR / "y_val.npy")
+        _, Xve, feat_names = build_features(X_val, X_val, feat_base_real)
+        xgb_vp = xgb.predict_proba(Xve)[:, 1]
+        Xvs = scaler.transform(Xve).astype(np.float32)
+        nn_vp_list = []
+        with torch.no_grad():
+            for i in range(0, len(Xvs), 4096):
+                b = torch.tensor(Xvs[i:i+4096], dtype=torch.float32)
+                nn_vp_list.extend(nn_net(b).squeeze(1).sigmoid().tolist())
+        nn_vp = np.array(nn_vp_list, dtype=np.float32)
+        X_train = np.load(PROC_DIR / "X_train.npy")
+        _, Xte, _ = build_features(X_train, X_train, feat_base_real)
+        feat_medians = np.median(Xte, axis=0).astype(np.float32)
+    else:
+        # cloud mode — no val data, use zeros as medians, skip val charts
+        y_val = xgb_vp = nn_vp = None
+        feat_medians = np.zeros(len(feat_names), dtype=np.float32)
 
-    Xvs = scaler.transform(Xve).astype(np.float32)
-    nn_vp_list = []
-    with torch.no_grad():
-        for i in range(0, len(Xvs), 4096):
-            b = torch.tensor(Xvs[i:i+4096], dtype=torch.float32)
-            nn_vp_list.extend(nn_net(b).squeeze(1).sigmoid().tolist())
-    nn_vp = np.array(nn_vp_list, dtype=np.float32)
-
-    # compute medians from training data for sane UI defaults
-    X_train = np.load(PROC_DIR / "X_train.npy")
-    _, Xte, _ = build_features(X_train, X_train, feat_base)
-    feat_medians = np.median(Xte, axis=0).astype(np.float32)
     return xgb, nn_net, scaler, feat_names, y_val, xgb_vp, nn_vp, feat_medians
 
 def score(xgb, nn_net, scaler, feat_names, inputs, feat_medians):
     # default to training medians so NN input is in-distribution
-    row = {f: float(feat_medians[i]) for i, f in enumerate(feat_names[:120])}
+    row = {f: float(feat_medians[i]) if i < len(feat_medians) else 0.0 for i, f in enumerate(feat_names[:120])}
     for k, v in inputs.items():
         if k in row: row[k] = float(v)
     X  = np.array([[row[f] for f in feat_names[:120]]], dtype=np.float32)
@@ -227,6 +245,10 @@ st.markdown('<div class="tag">Model Analytics</div>', unsafe_allow_html=True)
 t1, t2, t3, t4, t5 = st.tabs(["ROC Curves","Score Distribution","Feature Importance","Model Comparison","SHAP"])
 
 with t1:
+  if y_val is None:
+    st.info("ROC curve not available in cloud demo mode — val data not included in repo.")
+    st.markdown("**Validation AUC:** XGBoost = 0.7689 · PyTorch NN = 0.7571")
+  else:
     fxg,txg,_ = roc_curve(y_val, xgb_vp)
     fnn,tnn,_ = roc_curve(y_val, nn_vp)
     fig = go.Figure()
@@ -252,6 +274,9 @@ with t1:
     st.plotly_chart(fig, use_container_width=True)
 
 with t2:
+  if y_val is None:
+    st.info("Score distribution not available in cloud demo mode — val data not included in repo.")
+  else:
     rng = np.random.default_rng(42)
     idx = rng.choice(len(y_val), 4000, replace=False)
     sy, sxp = y_val[idx], xgb_vp[idx]
