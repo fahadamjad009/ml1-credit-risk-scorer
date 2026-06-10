@@ -245,6 +245,5 @@ The GitHub Actions workflow requires Kaggle API credentials (`KAGGLE_USERNAME` /
 [![GitHub](https://img.shields.io/badge/GitHub-fahadamjad009-181717?style=flat-square&logo=github)](https://github.com/fahadamjad009)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-fahad--amjad009-0A66C2?style=flat-square&logo=linkedin)](https://linkedin.com/in/fahad-amjad009)
 
-*Part of a 28-project portfolio covering ML, NLP, Data Engineering, BI, and FinTech*
 
 </div>
