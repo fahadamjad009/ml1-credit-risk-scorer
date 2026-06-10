@@ -31,13 +31,13 @@ Trained on 307,511 real loan applications from the [Home Credit Default Risk](ht
 
 ---
 
+
 ## Screenshots
 
-### Live Prediction Dashboard
-![Dashboard](reports/roc_curve.png)
+### Live Prediction Dashboard & Model Evaluation
 
-### Model Evaluation
 ![ROC Curve](reports/roc_curve.png)
+![Calibration](reports/calibration_curve.png)
 ![Feature Importance](reports/feature_importance.png)
 ![SHAP Summary](reports/shap_summary.png)
 
