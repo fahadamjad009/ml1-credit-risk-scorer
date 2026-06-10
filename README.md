@@ -14,7 +14,7 @@
 
 Trained on 307,511 real loan applications from the [Home Credit Default Risk](https://www.kaggle.com/c/home-credit-default-risk) Kaggle competition.
 
-[**Live Demo**](https://fahadamjad009.github.io/#projects) · [**API Docs**](http://localhost:8000/docs) · [**Portfolio**](https://fahadamjad009.github.io)
+[**Live Demo**](https://ml1-credit-risk-scorer.streamlit.app) · [**API Docs**](http://localhost:8000/docs) · [**Portfolio**](https://fahadamjad009.github.io)
 
 </div>
 
