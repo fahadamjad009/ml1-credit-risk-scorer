@@ -33,16 +33,14 @@ Trained on 307,511 real loan applications from the [Home Credit Default Risk](ht
 
 ## Screenshots
 
-<table>
-<tr>
-<td width="50%">
+### Live Prediction Dashboard
+![Dashboard](reports/roc_curve.png)
 
-**Live Prediction Dashboard**
+### Model Evaluation
+![ROC Curve](reports/roc_curve.png)
+![Feature Importance](reports/feature_importance.png)
+![SHAP Summary](reports/shap_summary.png)
 
-Dark-themed Streamlit app with real-time scoring, animated gauges, and interactive risk analytics.
-
-</td>
-<td width="50%">
 
 **FastAPI Swagger UI**
 
